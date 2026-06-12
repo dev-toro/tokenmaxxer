@@ -70,6 +70,8 @@ chmod +x "$PLUGIN_DIR/$PLUGIN_NAME"
 # Only the plugin may be executable — SwiftBar loads ANY executable file in the
 # folder as a plugin, so a stray +x on the icon/config spawns broken menu items.
 chmod 0644 "$PLUGIN_DIR/claude-icon.png"
+# Clean up phantom plugins from older installs (icon/config that were executable).
+rm -rf "$PLUGIN_DIR/Plugins/claude-icon.png" "$PLUGIN_DIR/Plugins/litellm-usage.config.json" 2>/dev/null || true
 
 # --- config ------------------------------------------------------------------
 say "Writing config (base_url=$BASE_URL, budget=\$$BUDGET, warn=$WARN%, crit=$CRIT%)"
