@@ -67,6 +67,9 @@ mkdir -p "$PLUGIN_DIR"
 fetch "litellm-usage.plugin.py" "$PLUGIN_DIR/$PLUGIN_NAME"
 fetch "assets/icon.png"          "$PLUGIN_DIR/claude-icon.png"
 chmod +x "$PLUGIN_DIR/$PLUGIN_NAME"
+# Only the plugin may be executable — SwiftBar loads ANY executable file in the
+# folder as a plugin, so a stray +x on the icon/config spawns broken menu items.
+chmod 0644 "$PLUGIN_DIR/claude-icon.png"
 
 # --- config ------------------------------------------------------------------
 say "Writing config (base_url=$BASE_URL, budget=\$$BUDGET, warn=$WARN%, crit=$CRIT%)"
@@ -78,6 +81,7 @@ cat > "$PLUGIN_DIR/litellm-usage.config.json" <<JSON
   "crit_pct": $CRIT
 }
 JSON
+chmod 0644 "$PLUGIN_DIR/litellm-usage.config.json"
 
 # --- API key into Keychain ---------------------------------------------------
 if [ -z "$BASE_URL" ]; then
