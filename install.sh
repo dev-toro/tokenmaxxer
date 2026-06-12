@@ -5,8 +5,10 @@
 # Local clone:   ./install.sh
 # One-liner:     curl -fsSL https://raw.githubusercontent.com/dev-toro/tokenmaxxer/main/install.sh | bash
 #
-# Configuration: copy .env.example -> .env and edit (sourced automatically).
-# Any value can also be passed inline as an env var, which wins over .env:
+# Configuration precedence: inline env var > .env (next to the script) >
+# existing config.json > interactive prompt (when run in a terminal) > default.
+# Run in a terminal and you'll be prompted for anything unset; pipe it
+# (curl|bash) non-interactively and it falls back to defaults. Vars:
 #   TOKENMAXXER_BASE_URL   LiteLLM gateway root      (required; or set later via menu)
 #   TOKENMAXXER_BUDGET     budget in USD             (default 200)
 #   TOKENMAXXER_WARN       warn % (orange)           (default 75)
@@ -29,21 +31,55 @@ if [ -n "$SRC" ] && [ -f "$SRC/.env" ]; then
 fi
 
 REPO_RAW="https://raw.githubusercontent.com/dev-toro/tokenmaxxer/${TOKENMAXXER_BRANCH:-main}"
-INTERVAL="${TOKENMAXXER_INTERVAL:-60s}"
-BASE_URL="${TOKENMAXXER_BASE_URL:-}"
-BUDGET="${TOKENMAXXER_BUDGET:-200}"
-WARN="${TOKENMAXXER_WARN:-75}"
-CRIT="${TOKENMAXXER_CRIT:-90}"
 PLUGIN_DIR="$HOME/Library/Application Support/SwiftBar"
-PLUGIN_NAME="litellm-usage.${INTERVAL}.py"
 # Data dir kept OUTSIDE the SwiftBar folder — SwiftBar's MakePluginExecutable
 # chmod +x's everything it scans, which would turn the icon/config into plugins.
 DATA_DIR="$HOME/Library/Application Support/tokenmaxxer"
+
+# Raw config: empty means "not provided" -> prompted (if a TTY) or defaulted below.
+BASE_URL="${TOKENMAXXER_BASE_URL:-}"
+BUDGET="${TOKENMAXXER_BUDGET:-}"
+WARN="${TOKENMAXXER_WARN:-}"
+CRIT="${TOKENMAXXER_CRIT:-}"
+INTERVAL="${TOKENMAXXER_INTERVAL:-}"
+API_KEY="${TOKENMAXXER_API_KEY:-}"
 
 say() { printf "\033[1;35m▸\033[0m %s\n" "$1"; }
 die() { printf "\033[1;31m✗ %s\033[0m\n" "$1" >&2; exit 1; }
 
 [ "$(uname -s)" = "Darwin" ] || die "macOS only."
+
+# --- interactive config ------------------------------------------------------
+# curl|bash leaves stdin attached to the pipe, so prompts must read /dev/tty.
+# Probe by actually opening it (a char device can exist but be disconnected).
+INTERACTIVE=0
+if { exec 3<>/dev/tty; } 2>/dev/null; then INTERACTIVE=1; exec 3>&-; fi
+
+# Seed unset values from an existing config.json so re-runs don't wipe settings.
+cfg_get() { # cfg_get <key>
+  [ -f "$DATA_DIR/config.json" ] || return 0
+  /usr/bin/python3 -c "import json;print(json.load(open('$DATA_DIR/config.json')).get('$1',''))" 2>/dev/null
+}
+ask() { # ask <prompt> <default> ; prints answer (default if blank/non-interactive)
+  local p="$1" d="$2" ans=""
+  if [ "$INTERACTIVE" = 1 ]; then
+    if [ -n "$d" ]; then printf '  %s [%s]: ' "$p" "$d" >/dev/tty
+    else printf '  %s: ' "$p" >/dev/tty; fi
+    IFS= read -r ans </dev/tty || ans=""
+  fi
+  printf '%s' "${ans:-$d}"
+}
+
+[ "$INTERACTIVE" = 1 ] && say "Configure tokenmaxxer (Enter accepts the [default]):"
+[ -z "$BASE_URL" ] && BASE_URL="$(ask 'LiteLLM gateway URL'   "$(cfg_get base_url)")"
+[ -z "$BUDGET"   ] && BUDGET="$(ask   'Monthly budget (USD)'   "$(cfg_get max_budget)")"
+[ -z "$WARN"     ] && WARN="$(ask     'Warn % (orange)'        "$(cfg_get warn_pct)")"
+[ -z "$CRIT"     ] && CRIT="$(ask     'Critical % (red)'       "$(cfg_get crit_pct)")"
+[ -z "$INTERVAL" ] && INTERVAL="$(ask 'Refresh interval'       '60s')"
+
+# Final fallbacks for anything still empty (non-interactive path).
+BUDGET="${BUDGET:-200}"; WARN="${WARN:-75}"; CRIT="${CRIT:-90}"; INTERVAL="${INTERVAL:-60s}"
+PLUGIN_NAME="litellm-usage.${INTERVAL}.py"
 
 # --- file source: local repo dir, else download from REPO_RAW ----------------
 fetch() { # fetch <relpath> <dest>
@@ -97,10 +133,10 @@ else
   SERVICE="$(printf '%s' "${BASE_URL#*://}" | tr '.' '-')-api-key"
   USER_NAME="$(id -un)"
   if ! security find-generic-password -s "$SERVICE" -a "$USER_NAME" -w >/dev/null 2>&1; then
-    KEY="${TOKENMAXXER_API_KEY:-}"
-    if [ -z "$KEY" ] && [ -t 0 ]; then
-      printf "Enter your LiteLLM API key for %s (blank to skip): " "$BASE_URL"
-      read -rs KEY; echo
+    KEY="$API_KEY"
+    if [ -z "$KEY" ] && [ "$INTERACTIVE" = 1 ]; then
+      printf '  LiteLLM API key for %s (input hidden, blank to skip): ' "$BASE_URL" >/dev/tty
+      IFS= read -rs KEY </dev/tty || KEY=""; printf '\n' >/dev/tty
     fi
     if [ -n "$KEY" ]; then
       security add-generic-password -U -s "$SERVICE" -a "$USER_NAME" -w "$KEY"
