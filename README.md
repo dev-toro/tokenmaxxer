@@ -12,16 +12,16 @@ The bar turns **orange** past your warn threshold and **red** past critical.
 
 ## Install
 
-One-liner (after you push this repo and set the URL in `install.sh`):
+One-liner:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<you>/tokenmaxxer/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dev-toro/tokenmaxxer/main/install.sh | bash
 ```
 
 Or from a clone:
 
 ```bash
-git clone https://github.com/<you>/tokenmaxxer.git && cd tokenmaxxer && ./install.sh
+git clone https://github.com/dev-toro/tokenmaxxer.git && cd tokenmaxxer && ./install.sh
 ```
 
 The installer is idempotent: installs Homebrew + SwiftBar if missing, drops the plugin and
@@ -34,7 +34,7 @@ Non-interactive (e.g. CI / piped):
 TOKENMAXXER_BASE_URL=https://ai.celonis.dev \
 TOKENMAXXER_BUDGET=200 \
 TOKENMAXXER_API_KEY=sk-xxxx \
-curl -fsSL https://raw.githubusercontent.com/<you>/tokenmaxxer/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dev-toro/tokenmaxxer/main/install.sh | bash
 ```
 
 ## How it works / data sources

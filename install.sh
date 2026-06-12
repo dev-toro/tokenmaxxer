@@ -3,7 +3,7 @@
 # tokenmaxxer installer — LiteLLM usage widget for the macOS menu bar.
 #
 # Local clone:   ./install.sh
-# One-liner:     curl -fsSL https://raw.githubusercontent.com/<you>/tokenmaxxer/main/install.sh | bash
+# One-liner:     curl -fsSL https://raw.githubusercontent.com/dev-toro/tokenmaxxer/main/install.sh | bash
 #
 # Configuration: copy .env.example -> .env and edit (sourced automatically).
 # Any value can also be passed inline as an env var, which wins over .env:
@@ -13,7 +13,6 @@
 #   TOKENMAXXER_CRIT       critical % (red)          (default 90)
 #   TOKENMAXXER_INTERVAL   refresh interval          (default 60s)
 #   TOKENMAXXER_API_KEY    LiteLLM virtual key       (stored in the macOS Keychain)
-#   GITHUB_USER            for the one-liner URL     (default REPLACE_ME)
 #
 set -euo pipefail
 
@@ -29,8 +28,7 @@ if [ -n "$SRC" ] && [ -f "$SRC/.env" ]; then
   done < "$SRC/.env"
 fi
 
-GITHUB_USER="${GITHUB_USER:-REPLACE_ME}"
-REPO_RAW="https://raw.githubusercontent.com/${GITHUB_USER}/tokenmaxxer/${TOKENMAXXER_BRANCH:-main}"
+REPO_RAW="https://raw.githubusercontent.com/dev-toro/tokenmaxxer/${TOKENMAXXER_BRANCH:-main}"
 INTERVAL="${TOKENMAXXER_INTERVAL:-60s}"
 BASE_URL="${TOKENMAXXER_BASE_URL:-https://ai.celonis.dev}"
 BUDGET="${TOKENMAXXER_BUDGET:-200}"

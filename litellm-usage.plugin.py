@@ -16,8 +16,10 @@
 # <xbar.title>LiteLLM Usage</xbar.title>
 # <xbar.version>1.1</xbar.version>
 # <xbar.author>dtoro</xbar.author>
+# <xbar.author.github>dev-toro</xbar.author.github>
 # <xbar.desc>Spend vs budget % bar chart + total tokens for a LiteLLM gateway.</xbar.desc>
 # <xbar.dependencies>python3</xbar.dependencies>
+# <xbar.abouturl>https://github.com/dev-toro/tokenmaxxer</xbar.abouturl>
 
 import os
 import sys
