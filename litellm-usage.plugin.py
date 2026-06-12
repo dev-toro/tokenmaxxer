@@ -15,7 +15,7 @@
 #
 # <xbar.title>LiteLLM Usage</xbar.title>
 # <xbar.version>1.1</xbar.version>
-# <xbar.author>tokenmaxxer</xbar.author>
+# <xbar.author>dtoro</xbar.author>
 # <xbar.desc>Spend vs budget % bar chart + total tokens for a LiteLLM gateway.</xbar.desc>
 # <xbar.dependencies>python3</xbar.dependencies>
 
