@@ -162,8 +162,10 @@ def fetch_spend(base_url, key):
     return float(val) if val is not None else None
 
 
-def sum_tokens():
-    total = 0
+def sum_tokens(month_prefix=None):
+    """Return (this_month, all_time) token totals from local Claude Code logs.
+    month_prefix is a 'YYYY-MM' string matched against each row's UTC timestamp."""
+    month, total = 0, 0
     for fp in glob.iglob(LOG_GLOB, recursive=True):
         try:
             with open(fp, "r", errors="ignore") as fh:
@@ -176,15 +178,21 @@ def sum_tokens():
                         continue
                     m = d.get("message")
                     u = m.get("usage") if isinstance(m, dict) else None
-                    if isinstance(u, dict):
-                        for k in ("input_tokens", "output_tokens",
-                                  "cache_creation_input_tokens", "cache_read_input_tokens"):
-                            v = u.get(k)
-                            if isinstance(v, int):
-                                total += v
+                    if not isinstance(u, dict):
+                        continue
+                    row = 0
+                    for k in ("input_tokens", "output_tokens",
+                              "cache_creation_input_tokens", "cache_read_input_tokens"):
+                        v = u.get(k)
+                        if isinstance(v, int):
+                            row += v
+                    total += row
+                    ts = d.get("timestamp")
+                    if month_prefix and isinstance(ts, str) and ts[:7] == month_prefix:
+                        month += row
         except OSError:
             continue
-    return total
+    return month, total
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +264,8 @@ def main():
         spend = cache.get("spend")
         stale = spend is not None
 
-    tokens = sum_tokens()
+    month_prefix = time.strftime("%Y-%m", time.gmtime())
+    tok_month, tok_all = sum_tokens(month_prefix)
 
     if spend is not None:
         cache.update({"spend": spend, "ts": int(time.time())})
@@ -292,7 +301,9 @@ def main():
     else:
         print("Budget: not set | font=Menlo")
     print("---")
-    print("Tokens (Claude Code, this Mac): %s | font=Menlo" % format(tokens, ","))
+    print("Tokens this month: %s | font=Menlo" % format(tok_month, ","))
+    print("Tokens all-time: %s | font=Menlo color=gray" % format(tok_all, ","))
+    print("(Claude Code on this Mac) | font=Menlo size=11 color=gray")
     print("---")
     if stale:
         age = int(time.time()) - int(cache.get("ts", 0))
