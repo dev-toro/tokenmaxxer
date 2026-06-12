@@ -66,8 +66,8 @@ scripts/make-icon.sh      # regenerate the icon from an SF Symbol
 ## Uninstall
 
 ```bash
-rm ~/Library/Application\ Support/SwiftBar/litellm-usage.* \
-   ~/Library/Application\ Support/SwiftBar/claude-icon.png
+rm -f ~/Library/Application\ Support/SwiftBar/litellm-usage.*.py
+rm -rf ~/Library/Application\ Support/tokenmaxxer
 # optional: brew uninstall --cask swiftbar
 ```
 

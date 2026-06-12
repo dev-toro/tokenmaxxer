@@ -35,10 +35,12 @@ import urllib.request
 # Paths
 # ---------------------------------------------------------------------------
 SCRIPT = os.path.abspath(__file__)
-PLUGIN_DIR = os.path.dirname(SCRIPT)
-ICON_FILE = os.path.join(PLUGIN_DIR, "claude-icon.png")
-CONFIG_FILE = os.path.join(PLUGIN_DIR, "litellm-usage.config.json")
-CACHE_FILE = os.path.expanduser("~/Library/Caches/litellm-usage-swiftbar.json")
+# Keep data OUT of the SwiftBar plugin folder: SwiftBar's MakePluginExecutable
+# chmod +x's everything in that folder, turning an icon/config into phantom plugins.
+DATA_DIR = os.path.expanduser("~/Library/Application Support/tokenmaxxer")
+ICON_FILE = os.path.join(DATA_DIR, "icon.png")
+CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
+CACHE_FILE = os.path.join(DATA_DIR, "cache.json")
 LOG_GLOB = os.path.expanduser("~/.claude/projects/**/*.jsonl")
 TIMEOUT = 8
 

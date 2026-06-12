@@ -36,6 +36,9 @@ WARN="${TOKENMAXXER_WARN:-75}"
 CRIT="${TOKENMAXXER_CRIT:-90}"
 PLUGIN_DIR="$HOME/Library/Application Support/SwiftBar"
 PLUGIN_NAME="litellm-usage.${INTERVAL}.py"
+# Data dir kept OUTSIDE the SwiftBar folder — SwiftBar's MakePluginExecutable
+# chmod +x's everything it scans, which would turn the icon/config into plugins.
+DATA_DIR="$HOME/Library/Application Support/tokenmaxxer"
 
 say() { printf "\033[1;35m▸\033[0m %s\n" "$1"; }
 die() { printf "\033[1;31m✗ %s\033[0m\n" "$1" >&2; exit 1; }
@@ -61,21 +64,23 @@ if [ ! -d "/Applications/SwiftBar.app" ]; then
   brew install --cask swiftbar
 fi
 
-# --- plugin + icon -----------------------------------------------------------
-say "Installing plugin into $PLUGIN_DIR"
-mkdir -p "$PLUGIN_DIR"
-fetch "litellm-usage.plugin.py" "$PLUGIN_DIR/$PLUGIN_NAME"
-fetch "assets/icon.png"          "$PLUGIN_DIR/claude-icon.png"
-chmod +x "$PLUGIN_DIR/$PLUGIN_NAME"
-# Only the plugin may be executable — SwiftBar loads ANY executable file in the
-# folder as a plugin, so a stray +x on the icon/config spawns broken menu items.
-chmod 0644 "$PLUGIN_DIR/claude-icon.png"
-# Clean up phantom plugins from older installs (icon/config that were executable).
-rm -rf "$PLUGIN_DIR/Plugins/claude-icon.png" "$PLUGIN_DIR/Plugins/litellm-usage.config.json" 2>/dev/null || true
+# --- remove artifacts from older installs that polluted the SwiftBar folder --
+# (icon/config used to live here and would re-register as phantom plugins).
+rm -f "$PLUGIN_DIR/claude-icon.png" "$PLUGIN_DIR/litellm-usage.config.json" 2>/dev/null || true
+rm -rf "$PLUGIN_DIR/Plugins/claude-icon.png" \
+       "$PLUGIN_DIR/Plugins/litellm-usage.config.json" 2>/dev/null || true
 
-# --- config ------------------------------------------------------------------
+# --- plugin (only file in the SwiftBar folder) -------------------------------
+say "Installing plugin into $PLUGIN_DIR"
+mkdir -p "$PLUGIN_DIR" "$DATA_DIR"
+fetch "litellm-usage.plugin.py" "$PLUGIN_DIR/$PLUGIN_NAME"
+chmod +x "$PLUGIN_DIR/$PLUGIN_NAME"
+
+# --- icon + config (in the data dir, not scanned by SwiftBar) ----------------
+fetch "assets/icon.png" "$DATA_DIR/icon.png"
+chmod 0644 "$DATA_DIR/icon.png"
 say "Writing config (base_url=$BASE_URL, budget=\$$BUDGET, warn=$WARN%, crit=$CRIT%)"
-cat > "$PLUGIN_DIR/litellm-usage.config.json" <<JSON
+cat > "$DATA_DIR/config.json" <<JSON
 {
   "base_url": "$BASE_URL",
   "max_budget": $BUDGET,
@@ -83,7 +88,7 @@ cat > "$PLUGIN_DIR/litellm-usage.config.json" <<JSON
   "crit_pct": $CRIT
 }
 JSON
-chmod 0644 "$PLUGIN_DIR/litellm-usage.config.json"
+chmod 0644 "$DATA_DIR/config.json"
 
 # --- API key into Keychain ---------------------------------------------------
 if [ -z "$BASE_URL" ]; then
