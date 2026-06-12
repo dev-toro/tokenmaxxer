@@ -7,7 +7,7 @@
 #
 # Configuration: copy .env.example -> .env and edit (sourced automatically).
 # Any value can also be passed inline as an env var, which wins over .env:
-#   TOKENMAXXER_BASE_URL   LiteLLM gateway root      (default https://ai.celonis.dev)
+#   TOKENMAXXER_BASE_URL   LiteLLM gateway root      (required; or set later via menu)
 #   TOKENMAXXER_BUDGET     budget in USD             (default 200)
 #   TOKENMAXXER_WARN       warn % (orange)           (default 75)
 #   TOKENMAXXER_CRIT       critical % (red)          (default 90)
@@ -30,7 +30,7 @@ fi
 
 REPO_RAW="https://raw.githubusercontent.com/dev-toro/tokenmaxxer/${TOKENMAXXER_BRANCH:-main}"
 INTERVAL="${TOKENMAXXER_INTERVAL:-60s}"
-BASE_URL="${TOKENMAXXER_BASE_URL:-https://ai.celonis.dev}"
+BASE_URL="${TOKENMAXXER_BASE_URL:-}"
 BUDGET="${TOKENMAXXER_BUDGET:-200}"
 WARN="${TOKENMAXXER_WARN:-75}"
 CRIT="${TOKENMAXXER_CRIT:-90}"
@@ -80,22 +80,26 @@ cat > "$PLUGIN_DIR/litellm-usage.config.json" <<JSON
 JSON
 
 # --- API key into Keychain ---------------------------------------------------
-SERVICE="$(printf '%s' "${BASE_URL#*://}" | tr '.' '-')-api-key"
-USER_NAME="$(id -un)"
-if ! security find-generic-password -s "$SERVICE" -a "$USER_NAME" -w >/dev/null 2>&1; then
-  KEY="${TOKENMAXXER_API_KEY:-}"
-  if [ -z "$KEY" ] && [ -t 0 ]; then
-    printf "Enter your LiteLLM API key for %s (blank to skip): " "$BASE_URL"
-    read -rs KEY; echo
-  fi
-  if [ -n "$KEY" ]; then
-    security add-generic-password -U -s "$SERVICE" -a "$USER_NAME" -w "$KEY"
-    say "Stored key in Keychain ($SERVICE)"
-  else
-    say "No key set yet. Add later:  security add-generic-password -U -s \"$SERVICE\" -a \"$USER_NAME\" -w \"<key>\""
-  fi
+if [ -z "$BASE_URL" ]; then
+  say "No gateway URL set. After install: menu → Configure → Set gateway URL, then add your key."
 else
-  say "Reusing existing Keychain key ($SERVICE)"
+  SERVICE="$(printf '%s' "${BASE_URL#*://}" | tr '.' '-')-api-key"
+  USER_NAME="$(id -un)"
+  if ! security find-generic-password -s "$SERVICE" -a "$USER_NAME" -w >/dev/null 2>&1; then
+    KEY="${TOKENMAXXER_API_KEY:-}"
+    if [ -z "$KEY" ] && [ -t 0 ]; then
+      printf "Enter your LiteLLM API key for %s (blank to skip): " "$BASE_URL"
+      read -rs KEY; echo
+    fi
+    if [ -n "$KEY" ]; then
+      security add-generic-password -U -s "$SERVICE" -a "$USER_NAME" -w "$KEY"
+      say "Stored key in Keychain ($SERVICE)"
+    else
+      say "No key set yet. Add later:  security add-generic-password -U -s \"$SERVICE\" -a \"$USER_NAME\" -w \"<key>\""
+    fi
+  else
+    say "Reusing existing Keychain key ($SERVICE)"
+  fi
 fi
 
 # --- point SwiftBar at the plugin dir & (re)launch ---------------------------

@@ -46,7 +46,7 @@ TIMEOUT = 8
 # Config (persisted to CONFIG_FILE, editable from the Configure menu)
 # ---------------------------------------------------------------------------
 DEFAULTS = {
-    "base_url": "https://ai.celonis.dev",  # LiteLLM gateway root
+    "base_url": "",  # LiteLLM gateway root; set via install .env or the Configure menu
     "max_budget": 200.0,                   # USD; key usually can't read it, so set here
     "warn_pct": 75.0,                      # bar turns orange at/above this
     "crit_pct": 90.0,                      # ...and red at/above this

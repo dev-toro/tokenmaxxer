@@ -31,7 +31,7 @@ in the macOS Keychain.
 Non-interactive (e.g. CI / piped):
 
 ```bash
-TOKENMAXXER_BASE_URL=https://ai.celonis.dev \
+TOKENMAXXER_BASE_URL=https://your-litellm-gateway.example.com \
 TOKENMAXXER_BUDGET=200 \
 TOKENMAXXER_API_KEY=sk-xxxx \
 curl -fsSL https://raw.githubusercontent.com/dev-toro/tokenmaxxer/main/install.sh | bash
