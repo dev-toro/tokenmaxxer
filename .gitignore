@@ -1,0 +1,6 @@
+# local runtime state (never committed)
+*.config.json
+litellm-usage-swiftbar.json
+
+# macOS
+.DS_Store

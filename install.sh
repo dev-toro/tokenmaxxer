@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+#
+# tokenmaxxer installer — LiteLLM usage widget for the macOS menu bar.
+#
+# Local clone:   ./install.sh
+# One-liner:     curl -fsSL https://raw.githubusercontent.com/<you>/tokenmaxxer/main/install.sh | bash
+#
+# Non-interactive overrides (env vars):
+#   TOKENMAXXER_BASE_URL   LiteLLM gateway root      (default https://ai.celonis.dev)
+#   TOKENMAXXER_BUDGET     budget in USD             (default 200)
+#   TOKENMAXXER_API_KEY    LiteLLM virtual key       (stored in the macOS Keychain)
+#   TOKENMAXXER_INTERVAL   refresh interval          (default 60s)
+#
+set -euo pipefail
+
+REPO_RAW="https://raw.githubusercontent.com/REPLACE_ME/tokenmaxxer/main"
+INTERVAL="${TOKENMAXXER_INTERVAL:-60s}"
+BASE_URL="${TOKENMAXXER_BASE_URL:-https://ai.celonis.dev}"
+BUDGET="${TOKENMAXXER_BUDGET:-200}"
+PLUGIN_DIR="$HOME/Library/Application Support/SwiftBar"
+PLUGIN_NAME="litellm-usage.${INTERVAL}.py"
+
+say() { printf "\033[1;35m▸\033[0m %s\n" "$1"; }
+die() { printf "\033[1;31m✗ %s\033[0m\n" "$1" >&2; exit 1; }
+
+[ "$(uname -s)" = "Darwin" ] || die "macOS only."
+
+# --- resolve source: local repo dir, else download from REPO_RAW -------------
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]:-/nonexistent}")" 2>/dev/null && pwd || true)"
+fetch() { # fetch <relpath> <dest>
+  if [ -n "$SRC" ] && [ -f "$SRC/$1" ]; then cp "$SRC/$1" "$2"
+  else curl -fsSL "$REPO_RAW/$1" -o "$2" || die "download failed: $1"; fi
+}
+
+# --- Homebrew ----------------------------------------------------------------
+if ! command -v brew >/dev/null 2>&1; then
+  say "Installing Homebrew…"
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
+fi
+
+# --- SwiftBar ----------------------------------------------------------------
+if [ ! -d "/Applications/SwiftBar.app" ]; then
+  say "Installing SwiftBar…"
+  brew install --cask swiftbar
+fi
+
+# --- plugin + icon -----------------------------------------------------------
+say "Installing plugin into $PLUGIN_DIR"
+mkdir -p "$PLUGIN_DIR"
+fetch "litellm-usage.plugin.py" "$PLUGIN_DIR/$PLUGIN_NAME"
+fetch "assets/icon.png"          "$PLUGIN_DIR/claude-icon.png"
+chmod +x "$PLUGIN_DIR/$PLUGIN_NAME"
+
+# --- config ------------------------------------------------------------------
+say "Writing config (base_url=$BASE_URL, budget=\$$BUDGET)"
+cat > "$PLUGIN_DIR/litellm-usage.config.json" <<JSON
+{
+  "base_url": "$BASE_URL",
+  "max_budget": $BUDGET,
+  "warn_pct": 75.0,
+  "crit_pct": 90.0
+}
+JSON
+
+# --- API key into Keychain ---------------------------------------------------
+SERVICE="$(printf '%s' "${BASE_URL#*://}" | tr '.' '-')-api-key"
+USER_NAME="$(id -un)"
+if ! security find-generic-password -s "$SERVICE" -a "$USER_NAME" -w >/dev/null 2>&1; then
+  KEY="${TOKENMAXXER_API_KEY:-}"
+  if [ -z "$KEY" ] && [ -t 0 ]; then
+    printf "Enter your LiteLLM API key for %s (blank to skip): " "$BASE_URL"
+    read -rs KEY; echo
+  fi
+  if [ -n "$KEY" ]; then
+    security add-generic-password -U -s "$SERVICE" -a "$USER_NAME" -w "$KEY"
+    say "Stored key in Keychain ($SERVICE)"
+  else
+    say "No key set yet. Add later:  security add-generic-password -U -s \"$SERVICE\" -a \"$USER_NAME\" -w \"<key>\""
+  fi
+else
+  say "Reusing existing Keychain key ($SERVICE)"
+fi
+
+# --- point SwiftBar at the plugin dir & (re)launch ---------------------------
+defaults write com.ameba.SwiftBar PluginDirectory -string "$PLUGIN_DIR" >/dev/null 2>&1 || true
+osascript -e 'tell application "SwiftBar" to quit' >/dev/null 2>&1 || true
+sleep 1
+open -a SwiftBar
+
+say "Done. Look top-right. Change budget/thresholds via the menu → Configure."
